@@ -1,7 +1,8 @@
 # 🧠 Arcpoint Context Engine (ACE)
 ### *A Predictive Circuit Breaker for Intelligent Routing*
 
-**Option Selected:** Option 3 (ML-Augmented Routing)
+**Primary Submission:** Option 3 (ML-Augmented Routing)  
+**Bonus Exploration:** Option 2 (Agent-Centric) - [See option2-agent/](option2-agent/)
 
 ## 📋 Overview
 ACE (Arcpoint Context Engine) is a prototype **Context Layer** designed to bring foresight to the routing engine.
@@ -153,3 +154,18 @@ arcpoint-exercise/
 4. **Multi-Backend Support:** Extend to consider multiple backends simultaneously and optimize routing across the fleet.
 
 5. **A/B Testing Framework:** Build infrastructure to test different threshold values and model architectures in production.
+
+---
+
+## 🤖 Bonus: Option 2 (Agent-Centric Approach)
+
+As an additional exploration, I also implemented a **proof-of-concept LLM-based routing agent** in [`option2-agent/`](option2-agent/).
+
+**Key Differences:**
+- **Option 3 (This repo):** Fast ML predictions (~microseconds), predictive, black-box
+- **Option 2 (Bonus):** LLM-based reasoning (~100ms), interpretable, explainable decisions
+
+The agent approach excels when **explainability** is critical (regulatory, auditing) and decision logic changes frequently. See [option2-agent/README.md](option2-agent/README.md) for details and demo.
+
+**Why both?** A hybrid system could use ML for 95% of fast requests and the agent for 5% of complex, high-value decisions requiring detailed reasoning.
+
