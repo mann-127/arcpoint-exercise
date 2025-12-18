@@ -119,6 +119,19 @@ arcpoint-exercise/
 │   └── latency_predictor.pkl  # Trained Random Forest model (gitignored)
 ├── notebooks/
 │   └── exploration.ipynb      # EDA: load-latency correlation analysis
+├── advanced/                  # 🆕 Production-grade extensions
+│   ├── feedback_loop.py       # Online learning + drift detection
+│   ├── anomaly_detector.py    # Isolation Forest anomaly detection
+│   ├── chaos_simulator.py     # Chaos engineering fault injection
+│   ├── feedback_router.py     # Combined router with all features
+│   ├── feedback_dashboard.py  # Streamlit real-time dashboard
+│   └── README.md              # Detailed documentation
+├── option2-agent/             # 🤖 LLM-based routing agent (bonus)
+│   ├── context_api.py         # Flask API for system context
+│   ├── agent.py               # LLM routing agent
+│   ├── prompts.py             # Structured prompts
+│   ├── demo.py                # Demo script
+│   └── README.md              # Option 2 documentation
 ├── Makefile                   # Development shortcuts
 ├── requirements.txt           # Python dependencies with version pins
 ├── .gitignore                 # Excludes generated files and caches
@@ -149,11 +162,73 @@ arcpoint-exercise/
 
 2. **Redis Implementation:** Replace the in-memory Pandas FeatureStore with Redis TimeSeries for production persistence.
 
-3. **Shadow Mode:** Deploy the model in "shadow mode" to verify the `risk_score` calibration against live traffic before enabling active blocking.
+3. ~~**Shadow Mode:** Deploy the model in "shadow mode" to verify the `risk_score` calibration against live traffic before enabling active blocking.~~ ✅ **Implemented** — See `advanced/feedback_loop.py` with A/B testing.
 
 4. **Multi-Backend Support:** Extend to consider multiple backends simultaneously and optimize routing across the fleet.
 
-5. **A/B Testing Framework:** Build infrastructure to test different threshold values and model architectures in production.
+5. ~~**A/B Testing Framework:** Build infrastructure to test different threshold values and model architectures in production.~~ ✅ **Implemented** — See `advanced/feedback_loop.py` with t-test significance.
+
+---
+
+## 🔄 Advanced: Closed-Loop Feedback System
+
+Beyond the basic ML predictor, I implemented a **production-grade feedback system** in [`advanced/`](advanced/).
+
+### Components
+
+| File | Purpose | Key Algorithm |
+|------|---------|---------------|
+| `feedback_loop.py` | Continuous learning | SGDRegressor (online), Page-Hinkley (drift) |
+| `anomaly_detector.py` | Unusual pattern detection | Isolation Forest |
+| `chaos_simulator.py` | Resilience testing | Netflix-style fault injection |
+| `feedback_router.py` | Unified routing engine | Combines all components |
+| `feedback_dashboard.py` | Real-time observability | Streamlit dashboard |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    FEEDBACK ROUTER                               │
+├─────────────────────────────────────────────────────────────────┤
+│   ML Model ──▶ Decision Engine ──▶ Backend Router               │
+│       ▲                                    │                     │
+│       │            ┌──────────────┐        ▼                     │
+│   Online      ◀────│   Feedback   │◀────  Actual                 │
+│   Learner          │   Collector  │       Latency                │
+│       │            └──────────────┘                              │
+│       ▼                   │                                      │
+│   Drift Detector    Anomaly Detector    Chaos Simulator          │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌──────────────────┐
+                    │    Dashboard     │
+                    │   (Streamlit)    │
+                    └──────────────────┘
+```
+
+### Why This Matters
+
+| Feature | Interview Signal |
+|---------|------------------|
+| Feedback Loop | "I understand models drift in production" |
+| Online Learning | "I know batch training isn't enough" |
+| Drift Detection | "I apply statistical rigor (Page-Hinkley)" |
+| Anomaly Detection | "I handle edge cases proactively" |
+| Chaos Engineering | "I think about failure modes" |
+| Dashboard | "I build observable systems" |
+
+### Quick Start
+
+```bash
+# Run the dashboard
+streamlit run advanced/feedback_dashboard.py
+
+# Run chaos test
+python -c "from advanced.feedback_router import FeedbackRouter; FeedbackRouter('models/latency_predictor.pkl').run_chaos_test('latency_spike')"
+```
+
+See [advanced/README.md](advanced/README.md) for detailed documentation.
 
 ---
 
