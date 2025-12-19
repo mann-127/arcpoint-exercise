@@ -1,74 +1,79 @@
-# 🧠 Arcpoint Context Engine (ACE)
-### *A Predictive Circuit Breaker for Intelligent Routing*
+# Arcpoint Context Engine
 
-**Primary Submission:** Option 3 (ML-Augmented Routing)  
-**Bonus Exploration:** Option 2 (Agent-Centric) - [See option2-agent/](option2-agent/)
+> Predictive Circuit Breaker for Intelligent Request Routing
 
-## 📋 Overview
-ACE (Arcpoint Context Engine) is a prototype **Context Layer** designed to bring foresight to the routing engine.
+## Problem Statement
 
-In high-scale systems, reactive health checks are often too slow—by the time a heartbeat fails, thousands of requests may have already degraded. ACE moves from **Reactive** to **Proactive** by predicting system degradation *before* it impacts the user.
+Routing engines answer questions reactively:
+- "Why did quality drop?" (after it happened)
+- "Which backend should handle this?" (reactive load balancing)
 
-It answers the core question: **"What capacity risks are we taking in the next 5 minutes?"**
+Our mission: Answer proactively in real-time:
+- "What's the current state of our model fleet?"
+- "Which backend should I use for this request?"
+- "Solution: Three Approaches
 
----
+### Option 3: ML-Augmented Routing (Primary)
+Predictive circuit breaker using Random Forest to detect latency degradation 5 minutes ahead.
 
-## 🏗️ Architecture
+**Key metrics:**
+- MAE: 62ms (predictions within ±62ms)
+- R²: 0.53 (explains 53% of variance)
+- Inference latency: <1ms
+- Decision: If predicted_latency > 300ms → REROUTE
 
-The system follows a **Stream-to-Inference** pattern designed for sub-millisecond overhead:
+### Option 2: LLM-Based Agent (Bonus)
+Context API + Claude agent for explainable routing decisions with full reasoning trace.
 
-1. **Ingest (Mock):** Synthetic data generator simulates realistic traffic patterns with periodic load spikes and correlated latency degradation.
-2. **State Management:** A sliding-window `FeatureStore` maintains recent cluster state in memory (production would use Redis).
-3. **Inference Engine:** Calculates real-time derivatives (rate of change) and queries the pre-trained Random Forest model.
-4. **Policy Layer:** Converts predictions into routing decisions based on configurable thresholds.
+**Trade-off:**
+- Latency: ~500ms (slower but interpretable)
+## Architecture
 
-**Code Quality:** Industry-standard docstrings, structured logging, and modular design for production readiness.
-
----
-
-## 🛠️ Design Decisions & Trade-offs
-
-### 1. Why "Predictive" instead of "Reactive"?
-Traditional health checks (e.g., a heartbeat every 30s) are insufficient for an intelligent control plane.
-* **My Solution:** I trained a model to treat `Current Load` and `Latency Velocity` as leading indicators. This allows us to shed load *before* the backend collapses.
-
-### 2. Model Choice: Random Forest vs. Deep Learning
-I deliberately chose a **Random Forest Regressor** over LSTM/Transformers for this prototype.
-* **Reasoning:** In the critical routing path, **inference latency** is the bottleneck. A decision tree inference is $\approx O(\text{depth})$, taking microseconds. A deep learning model would introduce unacceptable overhead (50ms+) for a routing decision that needs to be instant.
-* **Trade-off:** We sacrifice long-term sequence memory for immediate speed and interpretability.
-
-### 3. Handling Async Quality Scores
-The prompt noted that "Quality scores are available async (hours later)."
-* **Strategy:** I analyzed the data (see `notebooks/exploration.ipynb`) and found `latency` is a strong proxy for quality degradation. The model uses `latency` as a real-time proxy feature, while `quality_score` is used only for offline training/labeling.
-
-### 4. Threshold Tuning (Product Sense)
-I tuned the reroute threshold to **300ms**.
-* **Reasoning:** While the critical failure point might be higher (500ms+), a high-reliability system should be biased towards false positives ("better safe than sorry"). It is better to unnecessarily reroute traffic than to let users suffer an outage.
-
-### 5. The "Cold Start" Problem
-The system defaults to simple Round-Robin routing if the Feature Store has fewer than 5 data points (e.g., after a restart), ensuring high availability even when the "Intelligence" layer is warming up.
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-* Python 3.12+
-* `make` (optional, for convenience)
-
-### 1. Setup
-Install dependencies.
-```bash
-make setup
-# OR: pip install -r requirements.txt
+```
+Request → Feature Store → ML Model → Routing Decision
+            (Sliding         (Random    (Primary/
+             Window)         Forest)    Secondary)
+              ↓               ↓              ↓
+         Feedback Loop ← Observe Outcome ← Execute
+              ↓
+        Drift Detection
+              ↓
+        Online Learner
 ```
 
-### 2. Generate Synthetic Data
-Create the "Universe" of logs to train the model.
+## Design Decisions
+
+| Decision | Why | Trade-off |
+|----------|-----|-----------|
+| **Random Forest over LSTM** | <1ms inference vs 50ms | Sacrificed sequence modeling for speed |
+| **Load + Slope as features** | Slope is leading indicator (r=0.88) | Limited to 5-min prediction window |
+| **300ms threshold** | Conservative: better safe than sorry | Some unnecessary reroutes during noise |
+| **Online learning** | Adapts to production drift in real-time | Incremental updates vs full retraining |
+| **Time-series split** | Respects temporal order, prevents data leakage | More realistic validation |
+
+## Implementation
+
+### Quick Start
 
 ```bash
-make data
-# OR: python data/mock_generator.py
+# Setup
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Generate data & train
+python3 data/mock_generator.py
+python3 src/model.py
+
+# Run router
+python3 src/router.py
+
+# Run dashboard
+streamlit run advanced/feedback_dashboard.py
+
+# Explore
+jupyter notebook notebooks/exploration.ipynb
+```
 ```
 
 ### 3. Train the Brain
@@ -116,38 +121,29 @@ arcpoint-exercise/
 │   ├── model.py               # Model training pipeline with logging
 │   └── router.py              # Intelligent router with predictive circuit breaker
 ├── models/
-│   └── latency_predictor.pkl  # Trained Random Forest model (gitignored)
-├── notebooks/
-│   └── exploration.ipynb      # EDA: load-latency correlation analysis
-├── advanced/                  # 🆕 Production-grade extensions
-│   ├── feedback_loop.py       # Online learning + drift detection
-│   ├── anomaly_detector.py    # Isolation Forest anomaly detection
-│   ├── chaos_simulator.py     # Chaos engineering fault injection
-│   ├── feedback_router.py     # Combined router with all features
-│   ├── feedback_dashboard.py  # Streamlit real-time dashboard
-│   └── README.md              # Detailed documentation
-├── option2-agent/             # 🤖 LLM-based routing agent (bonus)
-│   ├── context_api.py         # Flask API for system context
-│   ├── agent.py               # LLM routing agent
-│   ├── prompts.py             # Structured prompts
-│   ├── demo.py                # Demo script
-│   └── README.md              # Option 2 documentation
-├── Makefile                   # Development shortcuts
-├── requirements.txt           # Python dependencies with version pins
-├── .gitignore                 # Excludes generated files and caches
-└── README.md                  # Project documentation
+│ # Project Structure
+
 ```
-
----
-
-## � Implementation Details
-
-### Code Organization
-- **Modular design:** Each component (feature store, model, router) is independently testable
-- **Type hints & docstrings:** All public methods have comprehensive documentation
-- **Logging:** Structured logging at INFO level for operational visibility
-- **Constants:** Magic numbers extracted as class constants for maintainability
-
+arcpoint-exercise/
+├── data/                        # Data generation
+│   └── mock_generator.py        
+├── src/                         # Core routing system
+│   ├── features.py              
+│   ├── model.py                 
+│   └── router.py                
+├── option2-agent/               # LLM-based agent approach
+│   ├── context_api.py
+│   ├── agent.py
+│   └── prompts.py
+├── advanced/                    # Production-grade features
+│   ├── feedback_loop.py         
+│   ├── anomaly_detector.py      
+│   ├── chaos_simulator.py       
+│   ├── feedback_router.py       
+│   └── feedback_dashboard.py    
+├── notebooks/                   # Data exploration
+│   └── exploration.ipynb        
+└── models/                      # Trained artifacts (gitignored)
 ### Key Features
 - **Cold start handling:** Graceful degradation when insufficient data is available
 - **Time-series aware:** Training uses temporal split (not random) to prevent data leakage
