@@ -175,16 +175,16 @@ Beyond the basic ML predictor, I implemented a **production-grade feedback syste
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    FEEDBACK ROUTER                               │
+│                    FEEDBACK ROUTER                              │
 ├─────────────────────────────────────────────────────────────────┤
 │   ML Model ──▶ Decision Engine ──▶ Backend Router               │
-│       ▲                                    │                     │
-│       │            ┌──────────────┐        ▼                     │
-│   Online      ◀────│   Feedback   │◀────  Actual                 │
-│   Learner          │   Collector  │       Latency                │
-│       │            └──────────────┘                              │
-│       ▼                   │                                      │
-│   Drift Detector    Anomaly Detector    Chaos Simulator          │
+│       ▲                                    │                    │
+│       │            ┌──────────────┐        ▼                    │
+│   Online      ◀────│   Feedback   │◀────  Actual                │
+│   Learner          │   Collector  │       Latency               │
+│       │            └──────────────┘                             │
+│       ▼                   │                                     │
+│   Drift Detector    Anomaly Detector    Chaos Simulator         │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
